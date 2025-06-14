@@ -154,20 +154,10 @@ def analyze_results(results):
     }
 
 def save_results(results, stats):
-    """保存测试结果到JSON文件"""
-    output_data = {
-        'timestamp': datetime.now().isoformat(),
-        'config': REQUEST_CONFIG,
-        'statistics': stats,
-        'results': results
-    }
-    
-    filename = f"network_test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(output_data, f, indent=2, ensure_ascii=False)
-    
-    print(f"\n💾 测试结果已保存到: {filename}")
-    return filename
+    """保存测试结果到JSON文件 - 已禁用文件保存"""
+    # 不生成文件，只显示信息
+    print(f"\n💾 测试结果统计完成 (未保存文件)")
+    return None
 
 def main():
     """主函数"""
@@ -181,7 +171,7 @@ def main():
         # 分析结果
         stats = analyze_results(results)
         
-        # 保存结果
+        # 保存结果（不生成文件）
         save_results(results, stats)
         
         # 给出建议
