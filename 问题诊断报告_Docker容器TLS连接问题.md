@@ -58,8 +58,9 @@ httpcore.ConnectError
 #### 3.2 模型调用架构
 
 - **Chat Model**: 主要对话模型 (OpenRouter/qwen3-32b:free)
-- **Utility Model**: 内部任务模型 (OpenAI/gpt-4.1-nano) ⚠️ 问题所在
-- **Embedding Model**: 嵌入模型 (Ollama/beg-m3:latest)
+- **Utility Model**: 内部任务模型 (OpenRouter/qwen3-32b:free) ✅ 已修复
+- **Embedding Model**: 嵌入模型 (Ollama/bge-m3:latest) ✅ 已可用
+- **Browser Model**: 浏览器模型 (OpenAI/gpt-4.1-nano) ✅ 已可用
 
 #### 3.3 网络连接实现
 
@@ -75,13 +76,17 @@ httpcore.ConnectError
 # 网络测试脚本结果
 ✅ OpenAI API: 1489.7ms (正常)
 ✅ OpenRouter API: 9292.46ms (正常)
-❌ Ollama: 超时 (符合预期，服务不可用)
+✅ Ollama: 139.59ms (正常) - 服务已可用
 
 # 直接 API 调用测试
 curl -X POST "https://api.openai.com/v1/chat/completions" \
   -H "Authorization: Bearer sk-proj-..." \
   -d '{"model": "gpt-4.1-nano", ...}'
 # 响应：HTTP 200，返回正常 JSON
+
+# Ollama 服务测试
+curl -s http://10.92.82.168:11434/api/tags
+# 响应：返回可用模型列表，包含 bge-m3:latest
 ```
 
 #### Docker 容器内测试 ❌
