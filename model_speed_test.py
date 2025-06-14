@@ -288,49 +288,49 @@ def test_single_model(config):
     return result
 
 def get_test_models():
-    """获取要测试的模型列表"""
+    """获取要测试的模型列表 - 仅从settings.json读取配置的模型"""
     settings = load_settings()
+
+    if not settings:
+        print("❌ 无法加载设置文件")
+        return []
 
     models_to_test = []
 
     # 从设置中获取当前配置的模型
-    if 'chat_model_provider' in settings and 'chat_model_name' in settings:
-        models_to_test.append({
-            'provider': settings['chat_model_provider'],
-            'model_name': settings['chat_model_name'],
-            'type': 'chat'
-        })
-
-    if 'util_model_provider' in settings and 'util_model_name' in settings:
-        models_to_test.append({
-            'provider': settings['util_model_provider'],
-            'model_name': settings['util_model_name'],
-            'type': 'utility'
-        })
-
-    if 'embed_model_provider' in settings and 'embed_model_name' in settings:
-        models_to_test.append({
-            'provider': settings['embed_model_provider'],
-            'model_name': settings['embed_model_name'],
-            'type': 'embedding'
-        })
-
-    # 添加一些常用的测试模型
-    common_models = [
-        {'provider': 'OPENAI', 'model_name': 'gpt-3.5-turbo', 'type': 'test'},
-        {'provider': 'OPENAI', 'model_name': 'gpt-4', 'type': 'test'},
-        {'provider': 'ANTHROPIC', 'model_name': 'claude-3-haiku-20240307', 'type': 'test'},
-        {'provider': 'GROQ', 'model_name': 'llama3-8b-8192', 'type': 'test'},
-        {'provider': 'OLLAMA', 'model_name': 'llama3.2', 'type': 'test'},
-        {'provider': 'OPENROUTER', 'model_name': 'qwen/qwen3-32b:free', 'type': 'test'},
+    model_configs = [
+        ('chat_model_provider', 'chat_model_name', 'chat', '聊天模型'),
+        ('util_model_provider', 'util_model_name', 'utility', '工具模型'),
+        ('embed_model_provider', 'embed_model_name', 'embedding', '嵌入模型'),
+        ('browser_model_provider', 'browser_model_name', 'browser', '浏览器模型')
     ]
 
-    # 只添加有API密钥的模型
-    for model in common_models:
-        if get_api_key(model['provider']) or model['provider'].upper() in ['OLLAMA', 'LMSTUDIO']:
-            # 避免重复
-            if not any(m['provider'] == model['provider'] and m['model_name'] == model['model_name'] for m in models_to_test):
-                models_to_test.append(model)
+    print("📋 从settings.json读取模型配置:")
+
+    for provider_key, name_key, model_type, type_name in model_configs:
+        if provider_key in settings and name_key in settings:
+            provider = settings[provider_key]
+            model_name = settings[name_key]
+
+            # 检查是否有必要的认证信息
+            can_test = False
+            if provider.upper() in ['OLLAMA', 'LMSTUDIO']:
+                can_test = True  # 本地服务不需要API密钥
+            elif get_api_key(provider):
+                can_test = True  # 有API密钥
+
+            if can_test:
+                models_to_test.append({
+                    'provider': provider,
+                    'model_name': model_name,
+                    'type': model_type
+                })
+                print(f"  ✅ {type_name}: {provider}/{model_name}")
+            else:
+                print(f"  ⚠️  {type_name}: {provider}/{model_name} (缺少API密钥，跳过测试)")
+
+    if not models_to_test:
+        print("❌ 未找到可测试的模型配置")
 
     return models_to_test
 
@@ -429,8 +429,8 @@ def test_all_models():
                     'chat': '💬',
                     'utility': '🔧',
                     'embedding': '🔗',
-                    'test': '🧪'
-                }.get(model.get('type', 'test'), '🤖')
+                    'browser': '🌐'
+                }.get(model.get('type', 'unknown'), '🤖')
 
                 if result['status'] == 'success':
                     print(f"{status_icon} {model_type_icon} [{model.get('type', 'test').upper()}] {result['provider']}/{result['model_name']}: {result['response_time']}ms")
@@ -473,18 +473,18 @@ def analyze_results(results):
         'chat': '💬',
         'utility': '🔧',
         'embedding': '🔗',
-        'test': '🧪'
+        'browser': '🌐'
     }
 
     type_names = {
         'chat': '聊天模型',
         'utility': '工具模型',
         'embedding': '嵌入模型',
-        'test': '测试模型'
+        'browser': '浏览器模型'
     }
 
-    # 定义输出顺序：聊天模型、工具模型、嵌入模型、测试模型
-    output_order = ['chat', 'utility', 'embedding', 'test']
+    # 定义输出顺序：聊天模型、工具模型、嵌入模型、浏览器模型
+    output_order = ['chat', 'utility', 'embedding', 'browser']
 
     # 按指定顺序输出
     for model_type in output_order:
@@ -533,7 +533,8 @@ def analyze_results(results):
     model_configs = [
         ('chat_model_provider', 'chat_model_name', '聊天模型'),
         ('util_model_provider', 'util_model_name', '工具模型'),
-        ('embed_model_provider', 'embed_model_name', '嵌入模型')
+        ('embed_model_provider', 'embed_model_name', '嵌入模型'),
+        ('browser_model_provider', 'browser_model_name', '浏览器模型')
     ]
 
     for provider_key, name_key, type_name in model_configs:
@@ -566,7 +567,7 @@ def analyze_results(results):
     if successful_results:
         successful_results.sort(key=lambda x: x['response_time'])
         print(f"\n🏆 响应最快的模型:")
-        for i, result in enumerate(successful_results[:3], 1):
+        for i, result in enumerate(successful_results[:5], 1):  # 显示前5个最快的
             type_icon = type_icons.get(result.get('type', 'test'), '🤖')
             print(f"  {i}. {type_icon} {result['provider']}/{result['model_name']}: {result['response_time']}ms")
 
