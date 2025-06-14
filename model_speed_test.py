@@ -100,11 +100,15 @@ def test_openai_compatible(provider, model_name, api_key, base_url):
     
     try:
         start_time = time.time()
+        # 为内网地址禁用代理
+        proxies = {'http': '', 'https': ''} if any(addr in base_url for addr in ['10.92.82.168', '10.87.57.99', '127.0.0.1', 'localhost']) else None
+
         response = requests.post(
             f"{base_url}/chat/completions",
             headers=headers,
             json=data,
-            timeout=REQUEST_CONFIG['timeout']
+            timeout=REQUEST_CONFIG['timeout'],
+            proxies=proxies
         )
         end_time = time.time()
         
@@ -166,7 +170,7 @@ def test_anthropic(model_name, api_key):
         return None, f"未知错误: {str(e)[:100]}"
 
 def test_ollama(model_name, base_url):
-    """测试Ollama API"""
+    """测试Ollama生成API"""
     data = {
         'model': model_name,
         'prompt': TEST_MESSAGE,
@@ -175,10 +179,48 @@ def test_ollama(model_name, base_url):
 
     try:
         start_time = time.time()
+        # 为内网地址禁用代理
+        proxies = {'http': '', 'https': ''} if '10.92.82.168' in base_url or '127.0.0.1' in base_url or 'localhost' in base_url else None
+
         response = requests.post(
             f"{base_url}/api/generate",
             json=data,
-            timeout=REQUEST_CONFIG['timeout']
+            timeout=REQUEST_CONFIG['timeout'],
+            proxies=proxies
+        )
+        end_time = time.time()
+
+        response_time = round((end_time - start_time) * 1000, 2)
+
+        if response.status_code == 200:
+            return response_time, "成功"
+        else:
+            return None, f"HTTP {response.status_code}: {response.text[:100]}"
+
+    except requests.exceptions.Timeout:
+        return None, f"超时 ({REQUEST_CONFIG['timeout']}秒)"
+    except requests.exceptions.ConnectionError as e:
+        return None, f"连接错误: {str(e)[:100]}"
+    except Exception as e:
+        return None, f"未知错误: {str(e)[:100]}"
+
+def test_ollama_embedding(model_name, base_url):
+    """测试Ollama嵌入API"""
+    data = {
+        'model': model_name,
+        'prompt': TEST_MESSAGE
+    }
+
+    try:
+        start_time = time.time()
+        # 为内网地址禁用代理
+        proxies = {'http': '', 'https': ''} if '10.92.82.168' in base_url or '127.0.0.1' in base_url or 'localhost' in base_url else None
+
+        response = requests.post(
+            f"{base_url}/api/embeddings",
+            json=data,
+            timeout=REQUEST_CONFIG['timeout'],
+            proxies=proxies
         )
         end_time = time.time()
 
@@ -224,7 +266,10 @@ def test_single_model(config):
         if provider.upper() == 'ANTHROPIC':
             response_time, error = test_anthropic(model_name, api_key)
         elif provider.upper() == 'OLLAMA':
-            response_time, error = test_ollama(model_name, base_url)
+            if model_type == 'embedding':
+                response_time, error = test_ollama_embedding(model_name, base_url)
+            else:
+                response_time, error = test_ollama(model_name, base_url)
         else:
             # OpenAI兼容的API
             response_time, error = test_openai_compatible(provider, model_name, api_key, base_url)
@@ -307,6 +352,8 @@ def test_all_models():
     # 显示平台信息
     print("📡 平台配置信息:")
     providers_shown = set()
+
+    # 首先显示实际要测试的模型的提供商
     for model in models:
         provider = model['provider']
         if provider not in providers_shown:
@@ -318,14 +365,36 @@ def test_all_models():
                 # 隐藏API密钥，只显示前4位和后4位
                 masked_key = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "****"
                 print(f"  🔑 {provider}: API密钥 {masked_key}")
+                print(f"     🌐 连接地址: {base_url}")
             else:
                 print(f"  🌐 {provider}: {base_url}")
+
+    # 然后显示配置文件中但被跳过的提供商（如 Ollama）
+    settings = load_settings()
+    config_providers = set()
+
+    # 收集配置文件中的所有提供商
+    for key in ['chat_model_provider', 'util_model_provider', 'embed_model_provider', 'browser_model_provider']:
+        if key in settings:
+            config_providers.add(settings[key])
+
+    # 显示被跳过的提供商信息
+    for provider in config_providers:
+        if provider not in providers_shown:
+            api_key = get_api_key(provider)
+            base_url = get_base_url(provider)
+
+            if api_key:
+                masked_key = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "****"
+                print(f"  🔑 {provider}: API密钥 {masked_key} (⚠️ 已跳过测试)")
+                print(f"     🌐 连接地址: {base_url}")
+            else:
+                print(f"  🌐 {provider}: {base_url} (⚠️ 已跳过测试)")
 
     print("-" * 80)
 
     # 显示模型类型配置
     print("🤖 模型类型配置:")
-    settings = load_settings()
     model_types = {
         'chat': ('聊天模型', 'chat_model_provider', 'chat_model_name'),
         'utility': ('工具模型', 'util_model_provider', 'util_model_name'),
@@ -334,7 +403,10 @@ def test_all_models():
 
     for type_key, (type_name, provider_key, name_key) in model_types.items():
         if provider_key in settings and name_key in settings:
-            print(f"  📋 {type_name}: {settings[provider_key]}/{settings[name_key]}")
+            provider = settings[provider_key]
+            model_name = settings[name_key]
+
+            print(f"  📋 {type_name}: {provider}/{model_name}")
 
     print("-" * 80)
     print("🧪 开始测试...")
@@ -432,8 +504,9 @@ def analyze_results(results):
             # 平台信息
             if result.get('api_key_status') == 'configured':
                 print(f"    🔑 认证: API密钥已配置")
+                print(f"    🌐 连接地址: {result.get('base_url', 'N/A')}")
             else:
-                print(f"    🌐 地址: {result.get('base_url', 'N/A')}")
+                print(f"    🌐 连接地址: {result.get('base_url', 'N/A')}")
 
             # 测试用例
             print(f"    📝 测试消息: \"{result.get('test_message', TEST_MESSAGE)}\"")
@@ -450,10 +523,43 @@ def analyze_results(results):
     print("=" * 80)
     print("📈 统计摘要")
     print("=" * 80)
-    print(f"总测试数量: {total}")
+
+    # 计算跳过的模型数量
+    settings = load_settings()
+    total_configured = 0
+    skipped_models = []
+
+    # 检查配置的模型
+    model_configs = [
+        ('chat_model_provider', 'chat_model_name', '聊天模型'),
+        ('util_model_provider', 'util_model_name', '工具模型'),
+        ('embed_model_provider', 'embed_model_name', '嵌入模型')
+    ]
+
+    for provider_key, name_key, type_name in model_configs:
+        if provider_key in settings and name_key in settings:
+            total_configured += 1
+            provider = settings[provider_key]
+            model_name = settings[name_key]
+
+            # 检查是否在测试结果中
+            found_in_results = any(r['provider'] == provider and r['model_name'] == model_name for r in results)
+            if not found_in_results:
+                skipped_models.append(f"{type_name}: {provider}/{model_name}")
+
+    skipped_count = len(skipped_models)
+
+    print(f"配置的模型总数: {total_configured}")
+    print(f"实际测试数量: {total}")
+    print(f"跳过测试数量: {skipped_count}")
     print(f"成功: {success_count}")
     print(f"失败: {error_count}")
-    print(f"成功率: {success_count/total*100:.1f}%")
+    print(f"测试成功率: {success_count/total*100:.1f}%" if total > 0 else "测试成功率: N/A")
+
+    if skipped_models:
+        print(f"\n⏭️  跳过的模型:")
+        for model in skipped_models:
+            print(f"  • {model} (服务器不可用)")
 
     # 成功的模型按速度排序
     successful_results = [r for r in results if r['status'] == 'success']
