@@ -9,7 +9,7 @@ runtime.initialize()
 
 async def preload():
     try:
-        set = settings.get_default_settings()
+        set = settings.get_settings()
 
         # preload whisper model
         async def preload_whisper():
