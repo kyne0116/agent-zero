@@ -22,17 +22,102 @@
 
 ## 变更汇总表格
 
-| 文件名称              | 文件路径               | 变更类型 | 变更日期            | 备注说明                |
-| --------------------- | ---------------------- | -------- | ------------------- | ----------------------- |
-| preload.py            | /preload.py            | Modified | 2025-06-17 09:30:00 | 修复设置加载方法调用    |
-| model_speed_test.py   | /model_speed_test.py   | Added    | 2025-06-16 14:30:00 | AI 模型响应速度测试脚本 |
-| model_speed_test.sh   | /model_speed_test.sh   | Added    | 2025-06-16 14:30:00 | AI 模型测试脚本启动器   |
-| network_speed_test.py | /network_speed_test.py | Added    | 2025-06-16 14:30:00 | 网络连接测速脚本        |
-| network_speed_test.sh | /network_speed_test.sh | Added    | 2025-06-16 14:30:00 | 网络测试脚本启动器      |
+| 文件名称                        | 文件路径                                              | 变更类型 | 变更日期            | 备注说明                       |
+| ------------------------------- | ----------------------------------------------------- | -------- | ------------------- | ------------------------------ |
+| settings.yml                    | /docker/run/fs/etc/searxng/settings.yml               | Modified | 2025-06-19 16:30:00 | SearXNG 代理配置和超时设置     |
+| supervisord.conf                | /docker/run/fs/etc/supervisor/conf.d/supervisord.conf | Modified | 2025-06-19 16:30:00 | SearXNG 进程环境变量配置       |
+| searxng.py                      | /python/helpers/searxng.py                            | Modified | 2025-06-19 16:30:00 | SearXNG 服务 URL 配置修正      |
+| search_engine.py                | /python/tools/search_engine.py                        | Modified | 2025-06-19 16:30:00 | 搜索引擎逻辑改进和容错机制     |
+| apply_searxng_config.sh         | /docker/run/apply_searxng_config.sh                   | Added    | 2025-06-19 16:30:00 | SearXNG 配置自动应用脚本       |
+| deploy_agent0.sh                | /deploy_agent0.sh                                     | Added    | 2025-06-19 16:30:00 | Agent-Zero 一键部署脚本        |
+| SearXNG 网络检索问题分析总结.md | /docs/SearXNG 网络检索问题分析总结.md                 | Added    | 2025-06-19 16:30:00 | SearXNG 问题分析和解决方案文档 |
+| preload.py                      | /preload.py                                           | Modified | 2025-06-17 09:30:00 | 修复设置加载方法调用           |
+| model_speed_test.py             | /model_speed_test.py                                  | Added    | 2025-06-16 14:30:00 | AI 模型响应速度测试脚本        |
+| model_speed_test.sh             | /model_speed_test.sh                                  | Added    | 2025-06-16 14:30:00 | AI 模型测试脚本启动器          |
+| network_speed_test.py           | /network_speed_test.py                                | Added    | 2025-06-16 14:30:00 | 网络连接测速脚本               |
+| network_speed_test.sh           | /network_speed_test.sh                                | Added    | 2025-06-16 14:30:00 | 网络测试脚本启动器             |
 
 ---
 
 ## 详细变更日志
+
+### 2025-06-19 16:30:00 - 修复 SearXNG 网络检索超时问题
+
+**变更文件**: `/docker/run/fs/etc/searxng/settings.yml`
+
+- **变更类型**: Modified (修改)
+- **变更内容**:
+  - 添加代理配置：`http://: "http://host.docker.internal:7897"` 和 `https://: "http://host.docker.internal:7897"`
+  - 增加请求超时时间：从 3 秒增加到 15 秒 (`request_timeout: 15.0`)
+  - 修正服务端口：从 8888 修改为 55510 (`port: 55510`)
+  - 禁用 HTTP2：避免代理兼容性问题 (`enable_http2: false`)
+- **变更原因**: 解决 SearXNG 搜索引擎无法访问外部网络的超时问题
+- **影响范围**: 影响 SearXNG 搜索服务的网络连接和响应性能
+- **相关问题**: 修复了搜索引擎 ConnectTimeout 错误，提高搜索成功率
+
+**变更文件**: `/docker/run/fs/etc/supervisor/conf.d/supervisord.conf`
+
+- **变更类型**: Modified (修改)
+- **变更内容**:
+  - 为 SearXNG 进程添加代理环境变量
+  - 配置 HTTP_PROXY 和 HTTPS_PROXY 环境变量
+- **变更原因**: 确保 SearXNG 进程能够通过代理访问外部网络
+- **影响范围**: 影响 SearXNG 服务的进程环境配置
+
+**变更文件**: `/python/helpers/searxng.py`
+
+- **变更类型**: Modified (修改)
+- **变更内容**:
+  - 修正 SearXNG 服务 URL 配置
+  - 确保正确访问 SearXNG 服务端点
+- **变更原因**: 修复 URL 配置错误，确保搜索请求能够正确路由
+- **影响范围**: 影响 Python 代码中对 SearXNG 服务的调用
+
+**变更文件**: `/python/tools/search_engine.py`
+
+- **变更类型**: Modified (修改)
+- **变更内容**:
+  - 改进空结果检测逻辑：增加内容长度验证 (`len(content.strip()) > 10`)
+  - 添加 DuckDuckGo 备用搜索机制：SearXNG 失败时自动切换
+  - 增强错误处理和日志输出：提供详细的调试信息
+  - 修正 PrintStyle 调用方式：使用正确的参数格式
+- **变更原因**: 提高搜索引擎的稳定性和容错能力，解决间歇性空结果问题
+- **影响范围**: 影响搜索工具的可靠性和用户体验
+
+**变更文件**: `/docker/run/apply_searxng_config.sh`
+
+- **变更类型**: Added (新增)
+- **变更内容**:
+  - 创建 SearXNG 配置自动应用脚本
+  - 自动复制配置文件到容器内正确位置
+  - 重启 SearXNG 服务并验证配置
+  - 提供详细的执行状态反馈
+- **变更原因**: 解决容器重新创建后配置丢失问题，提供自动化配置管理
+- **影响范围**: 简化 SearXNG 配置部署和维护流程
+
+**变更文件**: `/deploy_agent0.sh`
+
+- **变更类型**: Added (新增)
+- **变更内容**:
+  - 创建 Agent-Zero 一键部署脚本
+  - 自动处理容器创建、配置应用和服务启动
+  - 提供交互式部署流程和状态检查
+  - 集成 SearXNG 配置修复流程
+- **变更原因**: 简化完整的部署流程，提供用户友好的部署体验
+- **影响范围**: 改善项目的部署和维护体验
+
+**变更文件**: `/docs/SearXNG网络检索问题分析总结.md`
+
+- **变更类型**: Added (新增)
+- **变更内容**:
+  - 详细记录 SearXNG 网络问题的分析过程
+  - 提供完整的解决方案和配置说明
+  - 包含测试验证结果和部署指南
+  - 记录注意事项和最佳实践
+- **变更原因**: 为后续维护和问题排查提供完整的技术文档
+- **影响范围**: 提升项目的可维护性和知识传承
+
+---
 
 ### 2025-06-17 09:30:00 - 修复预加载设置方法调用
 

@@ -1,7 +1,8 @@
 import aiohttp
-from python.helpers import runtime
+from python.helpers import runtime, dotenv
 
-URL = "http://localhost:8888/search"
+# 从环境变量获取 SearXNG URL，如果没有则使用默认值
+URL = dotenv.get_dotenv_value("SEARXNG_URL") or "http://localhost:80/search"
 
 async def search(query:str):
     return await runtime.call_development_function(_search, query=query)

@@ -21,6 +21,20 @@ server:
   # public URL of the instance, to ensure correct inbound links. Is overwritten
   # by ${SEARXNG_URL}.
   # base_url: http://example.com/location
+  bind_address: "0.0.0.0"
+  port: 55510
+
+# Proxy configuration for external requests
+outgoing:
+  request_timeout: 15.0 # 增加超时时间到15秒
+  useragent_suffix: ""
+  pool_connections: 100
+  pool_maxsize: 20
+  enable_http2: false # 禁用HTTP2以避免代理问题
+  # 代理配置
+  proxies:
+    http://: "http://host.docker.internal:7897"
+    https://: "http://host.docker.internal:7897"
 
 # redis:
 #   # URL to connect redis database. Is overwritten by ${SEARXNG_REDIS_URL}.
@@ -35,10 +49,10 @@ ui:
 #     - method
 
 enabled_plugins:
-  - 'Hash plugin'
-  - 'Self Informations'
-  - 'Tracker URL remover'
-  - 'Ahmia blacklist'
+  - "Hash plugin"
+  - "Self Informations"
+  - "Tracker URL remover"
+  - "Ahmia blacklist"
   # - 'Hostnames plugin'  # see 'hostnames' configuration below
   # - 'Open Access DOI rewrite'
 
@@ -57,7 +71,6 @@ enabled_plugins:
 #     - '(.*\.)?wikipedia.org$'
 
 engines:
-
 #   - name: fdroid
 #     disabled: false
 #
