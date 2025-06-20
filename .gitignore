@@ -48,3 +48,4 @@ instruments/**
 !**/.gitkeep
 agent_history.gif
 agent-zero.code-workspace
+env.conf.local
