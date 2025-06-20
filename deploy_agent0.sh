@@ -54,17 +54,31 @@ echo "✅ 容器启动成功"
 echo "🔧 应用SearXNG配置修复..."
 docker exec agent0 bash /a0/docker/run/apply_searxng_config.sh
 
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "🎉 Agent-Zero部署完成！"
-    echo "================================"
-    echo "📱 Web界面: http://localhost:50080"
-    echo "🔍 SearXNG: 已配置代理，搜索功能正常"
-    echo "📊 状态检查: docker exec agent0 supervisorctl status"
-    echo ""
-    echo "💡 提示: 如果需要重新部署，直接运行此脚本即可"
-else
+if [ $? -ne 0 ]; then
     echo "❌ SearXNG配置修复失败"
     echo "请手动运行: docker exec agent0 bash /a0/docker/run/apply_searxng_config.sh"
     exit 1
 fi
+
+# 安装自定义软件包
+echo "📦 安装自定义软件包..."
+if [ -f "/Users/admin/Work/Github/agent-zero/install_custom_packages.sh" ]; then
+    docker exec agent0 bash /a0/install_custom_packages.sh
+    if [ $? -eq 0 ]; then
+        echo "✅ 自定义软件包安装成功"
+    else
+        echo "⚠️ 自定义软件包安装失败，但不影响主要功能"
+    fi
+else
+    echo "ℹ️ 未找到自定义软件包安装脚本，跳过"
+fi
+
+echo ""
+echo "🎉 Agent-Zero部署完成！"
+echo "================================"
+echo "📱 Web界面: http://localhost:50080"
+echo "🔍 SearXNG: 已配置代理，搜索功能正常"
+echo "📊 状态检查: docker exec agent0 supervisorctl status"
+echo "� 自定义包安装: docker exec agent0 bash /a0/install_custom_packages.sh"
+echo ""
+echo "💡 提示: 如果需要重新部署，直接运行此脚本即可"

@@ -24,12 +24,14 @@
 
 | 文件名称                        | 文件路径                                              | 变更类型 | 变更日期            | 备注说明                       |
 | ------------------------------- | ----------------------------------------------------- | -------- | ------------------- | ------------------------------ |
+| setup_venv.sh                   | /docker/run/fs/ins/setup_venv.sh                      | Modified | 2025-06-20 15:45:00 | 虚拟环境持久化配置             |
+| deploy_agent0.sh                | /deploy_agent0.sh                                     | Modified | 2025-06-20 15:45:00 | 增加自定义软件包安装功能       |
+| install_custom_packages.sh      | /install_custom_packages.sh                           | Added    | 2025-06-20 15:45:00 | 自定义软件包安装脚本           |
 | settings.yml                    | /docker/run/fs/etc/searxng/settings.yml               | Modified | 2025-06-19 16:30:00 | SearXNG 代理配置和超时设置     |
 | supervisord.conf                | /docker/run/fs/etc/supervisor/conf.d/supervisord.conf | Modified | 2025-06-19 16:30:00 | SearXNG 进程环境变量配置       |
 | searxng.py                      | /python/helpers/searxng.py                            | Modified | 2025-06-19 16:30:00 | SearXNG 服务 URL 配置修正      |
 | search_engine.py                | /python/tools/search_engine.py                        | Modified | 2025-06-19 16:30:00 | 搜索引擎逻辑改进和容错机制     |
 | apply_searxng_config.sh         | /docker/run/apply_searxng_config.sh                   | Added    | 2025-06-19 16:30:00 | SearXNG 配置自动应用脚本       |
-| deploy_agent0.sh                | /deploy_agent0.sh                                     | Added    | 2025-06-19 16:30:00 | Agent-Zero 一键部署脚本        |
 | SearXNG 网络检索问题分析总结.md | /docs/SearXNG 网络检索问题分析总结.md                 | Added    | 2025-06-19 16:30:00 | SearXNG 问题分析和解决方案文档 |
 | preload.py                      | /preload.py                                           | Modified | 2025-06-17 09:30:00 | 修复设置加载方法调用           |
 | model_speed_test.py             | /model_speed_test.py                                  | Added    | 2025-06-16 14:30:00 | AI 模型响应速度测试脚本        |
@@ -40,6 +42,44 @@
 ---
 
 ## 详细变更日志
+
+### 2025-06-20 15:45:00 - 实现 Docker 容器软件包持久化
+
+**变更文件**: `/docker/run/fs/ins/setup_venv.sh`
+
+- **变更类型**: Modified (修改)
+- **变更内容**:
+  - 将 Python 虚拟环境路径从 `/opt/venv` 修改为 `/root/.venv`
+  - 使用变量 `VENV_DIR="/root/.venv"` 统一管理虚拟环境路径
+  - 更新虚拟环境创建和激活逻辑，确保使用持久化目录
+- **变更原因**: 解决 Docker 容器删除重建后软件包丢失问题，将 Python 虚拟环境迁移到持久化挂载目录
+- **影响范围**: 影响容器内 Python 环境的持久化，确保 pip 安装的包在容器重建后保持
+- **相关问题**: 修复了容器重新创建后需要重新安装 matplotlib 等 Python 包的问题
+
+**变更文件**: `/deploy_agent0.sh`
+
+- **变更类型**: Modified (修改)
+- **变更内容**:
+  - 重构 SearXNG 配置修复的错误处理逻辑
+  - 新增自定义软件包安装功能模块
+  - 添加 `install_custom_packages.sh` 脚本的自动检测和执行
+  - 增强部署完成后的信息提示，包含自定义包安装命令
+- **变更原因**: 提供容器软件包的自动化安装和管理功能，改善用户体验
+- **影响范围**: 增强部署脚本的功能完整性，提供更好的软件包管理体验
+
+**变更文件**: `/install_custom_packages.sh`
+
+- **变更类型**: Added (新增)
+- **变更内容**:
+  - 创建自定义软件包安装脚本
+  - 自动激活持久化 Python 虚拟环境 (`/root/.venv`)
+  - 安装常用 Python 科学计算包：matplotlib、seaborn、pandas、numpy、scipy、scikit-learn、jupyter、notebook
+  - 安装常用系统工具：vim、curl、wget、htop、tree
+  - 提供详细的安装进度反馈和状态提示
+- **变更原因**: 为用户提供一键安装常用软件包的便利工具，解决容器重建后的软件环境恢复问题
+- **影响范围**: 简化容器软件环境的配置和维护，提升开发效率
+
+---
 
 ### 2025-06-19 16:30:00 - 修复 SearXNG 网络检索超时问题
 
