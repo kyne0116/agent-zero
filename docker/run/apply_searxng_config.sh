@@ -27,6 +27,11 @@ cp /a0/docker/run/fs/etc/searxng/settings.yml /etc/searxng/settings.yml
 echo "✅ 应用Supervisor配置..."
 cp /a0/docker/run/fs/etc/supervisor/conf.d/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# 简化Supervisor配置，避免环境变量解析问题
+echo "🔧 简化Supervisor配置..."
+sed -i 's/environment=SEARXNG_SETTINGS_PATH.*$/environment=SEARXNG_SETTINGS_PATH="\/etc\/searxng\/settings.yml"/' /etc/supervisor/conf.d/supervisord.conf
+echo "✅ 已应用简化的Supervisor配置"
+
 # 验证配置是否正确应用
 echo "🔍 验证配置..."
 if grep -q "http://host.docker.internal:7897" /etc/searxng/settings.yml; then
@@ -36,10 +41,10 @@ else
     exit 1
 fi
 
-if grep -q "HTTP_PROXY" /etc/supervisor/conf.d/supervisord.conf; then
-    echo "✅ Supervisor环境变量已应用"
+if grep -q "SEARXNG_SETTINGS_PATH" /etc/supervisor/conf.d/supervisord.conf; then
+    echo "✅ Supervisor配置已应用"
 else
-    echo "❌ Supervisor环境变量应用失败"
+    echo "❌ Supervisor配置应用失败"
     exit 1
 fi
 
