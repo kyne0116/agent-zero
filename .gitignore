@@ -30,19 +30,19 @@ logs/*
 # Handle tmp directory
 tmp/*
 
-# Handle knowledge directory
-knowledge/**
-!knowledge/**/
-# Explicitly allow the default folder in knowledge
-!knowledge/default/
-!knowledge/default/**
+## Handle knowledge directory
+#knowledge/**
+#!knowledge/**/
+## Explicitly allow the default folder in knowledge
+#!knowledge/default/
+#!knowledge/default/**
 
-# Handle instruments directory
-instruments/**
-!instruments/**/
-# Explicitly allow the default folder in instruments
-!instruments/default/
-!instruments/default/**
+## Handle instruments directory
+#instruments/**
+#!instruments/**/
+## Explicitly allow the default folder in instruments
+#!instruments/default/
+#!instruments/default/**
 
 # Global rule to include .gitkeep files anywhere
 !**/.gitkeep
