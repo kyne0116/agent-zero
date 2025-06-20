@@ -148,9 +148,17 @@ class State:
             return wrapper
 
         if self.context:
-            self.context.get_state = override_hook(self.context.get_state)
-            self.context.get_session = override_hook(self.context.get_session)
-            self.context.remove_highlights = override_hook(self.context.remove_highlights)
+            # Check if the method exists before trying to override it
+            if hasattr(self.context, 'get_state'):
+                self.context.get_state = override_hook(self.context.get_state)
+            elif hasattr(self.context, 'get_state_summary'):
+                self.context.get_state = override_hook(self.context.get_state_summary)
+
+            if hasattr(self.context, 'get_session'):
+                self.context.get_session = override_hook(self.context.get_session)
+
+            if hasattr(self.context, 'remove_highlights'):
+                self.context.remove_highlights = override_hook(self.context.remove_highlights)
 
     async def get_page(self):
         if self.use_agent:

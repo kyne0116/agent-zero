@@ -24,6 +24,7 @@
 
 | 文件名称                        | 文件路径                                              | 变更类型 | 变更日期            | 备注说明                       |
 | ------------------------------- | ----------------------------------------------------- | -------- | ------------------- | ------------------------------ |
+| browser_agent.py                | /python/tools/browser_agent.py                        | Modified | 2025-06-20 18:30:00 | 修复 BrowserSession 方法兼容性 |
 | setup_venv.sh                   | /docker/run/fs/ins/setup_venv.sh                      | Modified | 2025-06-20 15:45:00 | 虚拟环境持久化配置             |
 | deploy_agent0.sh                | /deploy_agent0.sh                                     | Modified | 2025-06-20 15:45:00 | 增加自定义软件包安装功能       |
 | install_custom_packages.sh      | /install_custom_packages.sh                           | Added    | 2025-06-20 15:45:00 | 自定义软件包安装脚本           |
@@ -42,6 +43,35 @@
 ---
 
 ## 详细变更日志
+
+### 2025-06-20 18:30:00 - 修复浏览器代理 BrowserSession 方法兼容性问题
+
+**变更文件**: `/python/tools/browser_agent.py`
+
+- **变更类型**: Modified (修改)
+- **变更内容**:
+  - 修复 `override_hooks()` 方法中的 `AttributeError: 'BrowserSession' object has no attribute 'get_state'` 错误
+  - 添加 `hasattr()` 检查，确保方法存在后再尝试访问
+  - 当 `get_state` 方法不存在时，自动使用 `get_state_summary` 方法作为替代
+  - 为 `get_session` 和 `remove_highlights` 方法也添加了相同的安全检查
+  - 增强代码的健壮性，适应不同版本的 browser-use 库
+- **变更原因**: 解决 browser-use 库版本更新后方法名变更导致的兼容性问题，修复浏览器代理工具无法正常工作的错误
+- **影响范围**: 影响浏览器代理工具的正常运行，修复后可以正常使用浏览器自动化功能
+- **相关问题**: 修复了日志中出现的 `AttributeError: 'BrowserSession' object has no attribute 'get_state'` 错误
+- **技术细节**:
+
+  ```python
+  # 修改前（会导致 AttributeError）
+  self.context.get_state = override_hook(self.context.get_state)
+
+  # 修改后（增加安全检查）
+  if hasattr(self.context, 'get_state'):
+      self.context.get_state = override_hook(self.context.get_state)
+  elif hasattr(self.context, 'get_state_summary'):
+      self.context.get_state = override_hook(self.context.get_state_summary)
+  ```
+
+---
 
 ### 2025-06-20 15:45:00 - 实现 Docker 容器软件包持久化
 
